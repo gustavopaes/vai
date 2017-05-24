@@ -88,7 +88,6 @@ deploy() {
   getVersion
   createPackage
   sendPackage
-  ##installVersion
   clean
 }
 
@@ -118,10 +117,10 @@ case "$1" in
 
   *)
     echo "Usage:"
-    echo "  deploy.sh configure     Configure remote host and app path"
-    echo "  deploy.sh keygen        Configure SSH keygen to remote server"
-    echo "  deploy.sh deploy        Make deploy"
-    echo "  deploy.sh version       Show remote version"
-    echo "  deploy.sh help          Show this help"
+    echo "  vai configure     Configure remote host and app path"
+    echo "  vai keygen        Configure SSH keygen to remote server"
+    echo "  vai deploy        Make deploy"
+    echo "  vai version       Show remote version"
+    echo "  vai help          Show this help"
   ;;
 esac
