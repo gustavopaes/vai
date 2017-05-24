@@ -1,0 +1,127 @@
+#!/bin/bash
+
+checkConfig() {
+  if [ -e "deploy/deploy.config" ]
+  then
+    source "deploy/deploy.config"
+
+    ## normaliza o path do app
+    DEPLOY_PATH="$(dirname $DEPLOY_PATH)/$(basename $DEPLOY_PATH)"
+  else
+    echo "* WARN: no config file found. Please, run 'deploy.sh configure'"
+    exit 1
+  fi
+}
+
+configure() {
+  echo -n "Host: "
+  read DEPLOY_HOST
+
+  echo -n "Port: "
+  read DEPLOY_PORT
+
+  echo -n "User: "
+  read DEPLOY_USER
+
+  echo -n "Path: "
+  read DEPLOY_PATH
+
+  mkdir -p deploy
+  echo "#!/bin/bash" | cat > deploy/deploy.config
+  echo "export DEPLOY_HOST=${DEPLOY_HOST}" | cat >> deploy/deploy.config
+  echo "export DEPLOY_PORT=${DEPLOY_PORT}" | cat >> deploy/deploy.config
+  echo "export DEPLOY_USER=${DEPLOY_USER}" | cat >> deploy/deploy.config
+  echo "export DEPLOY_PATH=${DEPLOY_PATH}" | cat >> deploy/deploy.config
+
+  source "deploy/deploy.config"
+
+  sshKeyGen
+
+  echo "* Successfully configured server"
+}
+
+sshKeyGen() {
+  echo "* Starting configuring SSH keygen"
+
+  projectName=$(basename `git rev-parse --show-toplevel`)
+
+  ssh-keygen -f $HOME/.ssh/$projectName -t rsa -b 2048
+  ssh-copy-id -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST
+
+  echo "* Successfully configure SSH keygen"
+}
+
+createPackage() {
+  echo "* Creating package"
+  git archive --format=zip -o deploy/deploy.zip HEAD .
+  zip -rv -q deploy/deploy.zip deploy/version
+}
+
+getVersion() {
+  echo "* Getting commit version"
+  echo $(git rev-parse HEAD) | cat > deploy/version
+}
+
+sendPackage() {
+  echo "* Sending package to remote server"
+  scp -q -P $DEPLOY_PORT deploy/deploy.zip $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy.zip
+
+  echo "* Extracting package and running post-script"
+  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "unzip -q -o $DEPLOY_PATH/deploy.zip -d $DEPLOY_PATH && \
+        rm $DEPLOY_PATH/deploy.zip && \
+        cd $DEPLOY_PATH && \
+        chmod +x deploy/post-script.sh && \
+        ./deploy/post-script.sh"
+}
+
+version() {
+  echo "* Getting remote app version"
+  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "cat $DEPLOY_PATH/deploy/version"
+}
+
+clean() {
+  echo "* Removing temporary files"
+  rm -rf deploy/{version,deploy.zip}
+}
+
+deploy() {
+  getVersion
+  createPackage
+  sendPackage
+  ##installVersion
+  clean
+}
+
+case "$1" in
+  "configure")
+    configure
+  ;;
+
+  "keygen")
+    checkConfig
+    sshKeyGen
+  ;;
+
+  "deploy")
+    checkConfig
+    deploy
+  ;;
+
+  "version")
+    checkConfig
+    version
+  ;;
+
+  "_deploy")
+
+  ;;
+
+  *)
+    echo "Usage:"
+    echo "  deploy.sh configure     Configure remote host and app path"
+    echo "  deploy.sh keygen        Configure SSH keygen to remote server"
+    echo "  deploy.sh deploy        Make deploy"
+    echo "  deploy.sh version       Show remote version"
+    echo "  deploy.sh help          Show this help"
+  ;;
+esac
