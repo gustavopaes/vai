@@ -1,5 +1,7 @@
 #!/bin/bash
 
+VERSION="1.0.0"
+
 checkConfig() {
   if [ -e "deploy/deploy.config" ]
   then
@@ -116,6 +118,8 @@ case "$1" in
   ;;
 
   *)
+    echo "vai (version $VERSION)"
+    echo
     echo "Usage:"
     echo "  vai configure     Configure remote host and app path"
     echo "  vai keygen        Configure SSH keygen to remote server"
