@@ -42,9 +42,9 @@ Para configurar o _ssh key_ será solicitado um _password_ novo (deve ser digita
 
 #### Configurando restart da aplicação
 
-O `vai` irá enviar os arquivos para o servidor remoto e executar o script de restart da aplicação.
+O `vai` irá enviar os arquivos para o servidor remoto e executar o script de restart da aplicação (caso ele exista).
 
-Esse script deve ser criado dentro do diretório `deploy/`:
+Esse script `post-script.sh` deve ser criado dentro do diretório `deploy/`:
 
     touch deploy/post-script.sh
     vim deploy/post-script.sh
@@ -52,8 +52,7 @@ Esse script deve ser criado dentro do diretório `deploy/`:
 Um exemplo de script de restart:
 
     #!/bin/bash
-    echo "* Restart services"
-    docker-compose stop
+    docker-compose down
     docker-compose build
     docker-compose up -d
 
@@ -66,6 +65,18 @@ Em um projeto com o deploy configurado e o seu _ssh-key_ também configurado, ba
 Caso o _ssh-key_ não esteja configurado em seu computador, execute antes:
 
     vai keygen
+
+### Instalação limpa
+
+Em alguns casos, pode ser necessário a _instalação limpa_ de um sistema. Isso significa remover todos os arquivos 
+e enviar os novos.
+
+Para isso, utilize a opção `--clean-install` (ou simplesmente `-c`):
+
+    vai deploy --clean-install
+    vai deploy -c
+
+**Atenção:** Isso irá remover todos os arquivos e diretórios dentro do path da aplicação configurado em `./deploy/deploy.config`.
 
 ## Obtendo versão em produção
 
