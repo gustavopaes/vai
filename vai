@@ -1,13 +1,13 @@
 #!/bin/bash
 
-VERSION="1.1.1"
+VERSION="1.1.2"
 
 CLEAN_INSTALL=0
 ACTION="help"
 
 if [ -e "deploy/" ]
 then
-  SERVERS=$(find deploy -name *.config -type f)
+  SERVERS=$(find deploy -name "*.config" -type f)
 else
   SERVERS=""
 fi
