@@ -1,24 +1,31 @@
 #!/bin/bash
 
-VERSION="1.0.2"
+VERSION="1.1.0"
 
 CLEAN_INSTALL=0
 ACTION="help"
 
-checkConfig() {
-  if [ -e "deploy/deploy.config" ]
-  then
-    source "deploy/deploy.config"
+if [ -e "deploy/" ]
+then
+  SERVERS=$(find deploy -name *.config -type f)
+else
+  SERVERS=""
+fi
 
-    ## normaliza o path do app
-    DEPLOY_PATH="$(dirname $DEPLOY_PATH)/$(basename $DEPLOY_PATH)"
-  else
-    echo "* WARN: no config file found. Please, run 'deploy.sh configure'"
-    exit 1
-  fi
+loadServerConfig() {
+  source $1
+
+  echo "++++++++++++++++++++++++++++++++++++++++++++++++++"
+  echo "+ SERVER: $DEPLOY_HOST:$DEPLOY_PORT"
+  echo "+ USER  : $DEPLOY_USER"
+  echo "+ PATH  : $DEPLOY_PATH"
+  echo "++++++++++++++++++++++++++++++++++++++++++++++++++"
 }
 
 configure() {
+  echo -n "Name: "
+  read DEPLOY_NAME
+
   echo -n "Host: "
   read DEPLOY_HOST
 
@@ -32,11 +39,11 @@ configure() {
   read DEPLOY_PATH
 
   mkdir -p deploy
-  echo "#!/bin/bash" | cat > deploy/deploy.config
-  echo "export DEPLOY_HOST=${DEPLOY_HOST}" | cat >> deploy/deploy.config
-  echo "export DEPLOY_PORT=${DEPLOY_PORT}" | cat >> deploy/deploy.config
-  echo "export DEPLOY_USER=${DEPLOY_USER}" | cat >> deploy/deploy.config
-  echo "export DEPLOY_PATH=${DEPLOY_PATH}" | cat >> deploy/deploy.config
+  echo "#!/bin/bash" | cat > deploy/$DEPLOY_NAME.config
+  echo "export DEPLOY_HOST=${DEPLOY_HOST}" | cat >> deploy/$DEPLOY_NAME.config
+  echo "export DEPLOY_PORT=${DEPLOY_PORT}" | cat >> deploy/$DEPLOY_NAME.config
+  echo "export DEPLOY_USER=${DEPLOY_USER}" | cat >> deploy/$DEPLOY_NAME.config
+  echo "export DEPLOY_PATH=${DEPLOY_PATH}" | cat >> deploy/$DEPLOY_NAME.config
 
   source "deploy/deploy.config"
 
@@ -49,6 +56,7 @@ sshKeyGen() {
   echo "* Starting configuring SSH keygen"
 
   projectName=$(basename `git rev-parse --show-toplevel`)
+  projectName="$projectName-${DEPLOY_HOST/./-}"
 
   ssh-keygen -f $HOME/.ssh/$projectName -t rsa -b 2048
   ssh-copy-id -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST
@@ -86,7 +94,7 @@ sendPackage() {
 
 version() {
   echo "* Getting remote app version"
-  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "cat $DEPLOY_PATH/deploy/version"
+  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "echo -n '> '; cat $DEPLOY_PATH/deploy/version"
 }
 
 clean() {
@@ -123,18 +131,27 @@ case "$ACTION" in
   ;;
 
   "keygen")
-    checkConfig
-    sshKeyGen
+    for configFile in $SERVERS; do
+      loadServerConfig $configFile
+      sshKeyGen
+      echo
+    done;
   ;;
 
   "deploy")
-    checkConfig
-    deploy
+    for configFile in $SERVERS; do
+      loadServerConfig $configFile
+      deploy
+      echo
+    done;
   ;;
 
   "version")
-    checkConfig
-    version
+    for configFile in $SERVERS; do
+      loadServerConfig $configFile
+      version
+      echo
+    done;
   ;;
 
   "help"|*)
