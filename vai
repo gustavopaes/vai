@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.1.0"
+VERSION="1.1.1"
 
 CLEAN_INSTALL=0
 ACTION="help"
@@ -77,19 +77,23 @@ getVersion() {
 
 sendPackage() {
   echo "* Sending package to remote server"
-  scp -q -P $DEPLOY_PORT deploy/deploy.zip $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy.zip
+
+  ## define um nome temporário para o zip
+  PACKAGE_NAME="deploy-$(date +"%s").zip"
+
+  scp -q -P $DEPLOY_PORT deploy/deploy.zip $DEPLOY_USER@$DEPLOY_HOST:~/$PACKAGE_NAME
 
   POSTSCRIPT=deploy/post-script.sh
 
   ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "(($CLEAN_INSTALL)) && \
           echo '* Cleaning directory \"$DEPLOY_PATH\" (--clean-install option)' && \
-          find $DEPLOY_PATH/ ! -name 'deploy.zip' -type f -exec rm -f {} + && \
-          find $DEPLOY_PATH/ -mindepth 1 -type d -exec rm -rf {} +;\
+          rm -rf $DEPLOY_PATH/*;\
         echo '* Extracting package' && \
-        unzip -q -o $DEPLOY_PATH/deploy.zip -d $DEPLOY_PATH && \
-        rm $DEPLOY_PATH/deploy.zip && \
-        cd $DEPLOY_PATH && \
-        [ -f $POSTSCRIPT ] && echo '* Running post-script' && chmod +x $POSTSCRIPT && ./$POSTSCRIPT && echo '* Post-script done'"
+          mkdir -p $DEPLOY_PATH && \
+          unzip -q -o ~/$PACKAGE_NAME -d $DEPLOY_PATH && \
+          rm ~/$PACKAGE_NAME && \
+          cd $DEPLOY_PATH && \
+          [ -f $POSTSCRIPT ] && echo '* Running post-script' && chmod +x $POSTSCRIPT && ./$POSTSCRIPT && echo '* Post-script done'"
 }
 
 version() {
