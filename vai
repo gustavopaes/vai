@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 
 checkConfig() {
   if [ -e "deploy/deploy.config" ]
@@ -68,12 +68,13 @@ sendPackage() {
   echo "* Sending package to remote server"
   scp -q -P $DEPLOY_PORT deploy/deploy.zip $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy.zip
 
-  echo "* Extracting package and running post-script"
-  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "unzip -q -o $DEPLOY_PATH/deploy.zip -d $DEPLOY_PATH && \
+  POSTSCRIPT=deploy/post-script.sh
+
+  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "echo '* Extracting package' && \
+        unzip -q -o $DEPLOY_PATH/deploy.zip -d $DEPLOY_PATH && \
         rm $DEPLOY_PATH/deploy.zip && \
         cd $DEPLOY_PATH && \
-        chmod +x deploy/post-script.sh && \
-        ./deploy/post-script.sh"
+        [ -f $POSTSCRIPT ] && echo '* Running post-script' && chmod +x $POSTSCRIPT && ./$POSTSCRIPT && echo '* Post-script done'"
 }
 
 version() {
@@ -91,6 +92,7 @@ deploy() {
   createPackage
   sendPackage
   clean
+  echo "* done!"
 }
 
 case "$1" in
