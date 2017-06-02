@@ -1,19 +1,21 @@
 #!/bin/bash
 
-VERSION="1.1.2"
+VERSION="1.1.3"
 
 CLEAN_INSTALL=0
 ACTION="help"
 
 if [ -e "deploy/" ]
 then
-  SERVERS=$(find deploy -name "*.config" -type f)
+  SERVERS=$(find "deploy/" -name "*.config" -type f)
 else
   SERVERS=""
 fi
 
 loadServerConfig() {
-  source $1
+  # shellcheck source=deploy/
+  # shellcheck disable=SC1091
+  source "$1"
 
   echo "++++++++++++++++++++++++++++++++++++++++++++++++++"
   echo "+ SERVER: $DEPLOY_HOST:$DEPLOY_PORT"
@@ -24,27 +26,31 @@ loadServerConfig() {
 
 configure() {
   echo -n "Name: "
-  read DEPLOY_NAME
+  read -r DEPLOY_NAME
 
   echo -n "Host: "
-  read DEPLOY_HOST
+  read -r DEPLOY_HOST
 
   echo -n "Port: "
-  read DEPLOY_PORT
+  read -r DEPLOY_PORT
 
   echo -n "User: "
-  read DEPLOY_USER
+  read -r DEPLOY_USER
 
   echo -n "Path: "
-  read DEPLOY_PATH
+  read -r DEPLOY_PATH
 
   mkdir -p deploy
-  echo "#!/bin/bash" | cat > deploy/$DEPLOY_NAME.config
-  echo "export DEPLOY_HOST=${DEPLOY_HOST}" | cat >> deploy/$DEPLOY_NAME.config
-  echo "export DEPLOY_PORT=${DEPLOY_PORT}" | cat >> deploy/$DEPLOY_NAME.config
-  echo "export DEPLOY_USER=${DEPLOY_USER}" | cat >> deploy/$DEPLOY_NAME.config
-  echo "export DEPLOY_PATH=${DEPLOY_PATH}" | cat >> deploy/$DEPLOY_NAME.config
 
+  {
+    echo "#!/bin/bash"
+    echo "export DEPLOY_HOST=${DEPLOY_HOST}"
+    echo "export DEPLOY_PORT=${DEPLOY_PORT}"
+    echo "export DEPLOY_USER=${DEPLOY_USER}"
+    echo "export DEPLOY_PATH=${DEPLOY_PATH}"
+  } > "deploy/$DEPLOY_NAME.config"
+
+  # shellcheck disable=SC1091
   source "deploy/deploy.config"
 
   sshKeyGen
@@ -55,11 +61,11 @@ configure() {
 sshKeyGen() {
   echo "* Starting configuring SSH keygen"
 
-  projectName=$(basename `git rev-parse --show-toplevel`)
+  projectName=$(basename "$(git rev-parse --show-toplevel)")
   projectName="$projectName-${DEPLOY_HOST/./-}"
 
-  ssh-keygen -f $HOME/.ssh/$projectName -t rsa -b 2048
-  ssh-copy-id -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST
+  ssh-keygen -f "$HOME/.ssh/$projectName" -t rsa -b 2048
+  ssh-copy-id -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST"
 
   echo "* Successfully configure SSH keygen"
 }
@@ -72,7 +78,7 @@ createPackage() {
 
 getVersion() {
   echo "* Getting commit version"
-  echo $(git rev-parse HEAD) | cat > deploy/version
+  git rev-parse HEAD | cat > "deploy/version"
 }
 
 sendPackage() {
@@ -81,11 +87,12 @@ sendPackage() {
   ## define um nome temporário para o zip
   PACKAGE_NAME="deploy-$(date +"%s").zip"
 
-  scp -q -P $DEPLOY_PORT deploy/deploy.zip $DEPLOY_USER@$DEPLOY_HOST:~/$PACKAGE_NAME
+  scp -q -P "$DEPLOY_PORT" "deploy/deploy.zip" "$DEPLOY_USER@$DEPLOY_HOST:~/$PACKAGE_NAME"
 
   POSTSCRIPT=deploy/post-script.sh
 
-  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "(($CLEAN_INSTALL)) && \
+  # shellcheck disable=SC2029
+  ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "(($CLEAN_INSTALL)) && \
           echo '* Cleaning directory \"$DEPLOY_PATH\" (--clean-install option)' && \
           rm -rf $DEPLOY_PATH/*;\
         echo '* Extracting package' && \
@@ -98,7 +105,8 @@ sendPackage() {
 
 version() {
   echo "* Getting remote app version"
-  ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST "echo -n '> '; cat $DEPLOY_PATH/deploy/version"
+  # shellcheck disable=SC2029
+  ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "echo -n '> '; cat $DEPLOY_PATH/deploy/version"
 }
 
 clean() {
