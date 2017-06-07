@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.1.3"
+VERSION="1.1.4"
 
 CLEAN_INSTALL=0
 ACTION="help"
@@ -9,6 +9,7 @@ if [ -e "deploy/" ]
 then
   SERVERS=$(find "deploy/" -name "*.config" -type f)
 else
+  echo "* no config files found"
   SERVERS=""
 fi
 
@@ -92,7 +93,7 @@ sendPackage() {
   POSTSCRIPT=deploy/post-script.sh
 
   # shellcheck disable=SC2029
-  ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "(($CLEAN_INSTALL)) && \
+  ssh -t -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "(($CLEAN_INSTALL)) && \
           echo '* Cleaning directory \"$DEPLOY_PATH\" (--clean-install option)' && \
           rm -rf $DEPLOY_PATH/*;\
         echo '* Extracting package' && \
