@@ -9,7 +9,7 @@ local como da máquina remota.
 
 Clone esse repositório e execute o comando abaixo, para criar um link simbólico do executável:
 
-    sudo ln -s /usr/bin/vai $HOME/git/vai/vai
+    sudo ln -s <meu_git>/vai/vai /usr/bin/vai 
 
 Para testar, execute:
 

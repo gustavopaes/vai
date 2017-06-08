@@ -1,14 +1,20 @@
 #!/bin/bash
 
-VERSION="1.1.4"
+VERSION="1.2.0"
 
 CLEAN_INSTALL=0
 ACTION="help"
-
 if [ -e "deploy/" ]
 then
-  SERVERS=$(find "deploy/" -name "*.config" -type f)
-else
+  if [ -z "$2" ]
+  then
+    SERVERS=$(find "deploy/" -name "*.config" -type f)
+  else
+    SERVERS=$(find "deploy/" -name "$2.config" -type f)
+  fi
+fi
+if [ -z "$SERVERS" ]
+then
   echo "* no config files found"
   SERVERS=""
 fi
