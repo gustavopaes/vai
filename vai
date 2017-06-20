@@ -1,16 +1,16 @@
 #!/bin/bash
 
-VERSION="1.2.0"
+VERSION="1.3.0"
 
 CLEAN_INSTALL=0
 ACTION="help"
 if [ -e "deploy/" ]
 then
-  if [ -z "$2" ]
+  if [ -z "${!#}" ]
   then
     SERVERS=$(find "deploy/" -name "*.config" -type f)
   else
-    SERVERS=$(find "deploy/" -name "$2.config" -type f)
+    SERVERS=$(find "deploy/" -name "${!#}.config" -type f)
   fi
 fi
 if [ -z "$SERVERS" ]
@@ -130,34 +130,30 @@ deploy() {
 }
 
 runScript() {  
-    for script in "$@"; do
-      if [ -f "deploy/$script" ]
-      then
-        script="deploy/$script"
-        scp -q -P "$DEPLOY_PORT" "$script" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy"
-        ssh -t -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "((1)) && \
-          cd $DEPLOY_PATH && \
-          echo '* Running $script' && chmod +x $script && ./$script && echo '* $script done'"
-        echo
-      else
-        echo "* no $script file found"
-      fi
-    done;  
+  script="deploy/$1"
+
+  if [ -f "$script" ]
+  then
+    scp -q -P "$DEPLOY_PORT" "$script" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy"
+    ssh -t -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "cd $DEPLOY_PATH &&\
+      echo '* Running $script' && chmod +x $script && ./$script && echo '* $script done'"
+    echo
+  else
+    echo "* no $script file found"
+  fi
 }
 
-while [[ $# -gt 0 ]]
-do
-  case "$1" in
+for arg in $@;
+do   
+  case "$arg" in
     "--clean-install"|"-c")
       CLEAN_INSTALL=1
     ;;
 
-    "configure"|"keygen"|"deploy"|"version"|"help"|"start"|"stop"|"restart")
-      ACTION="$1"
+    "configure"|"keygen"|"deploy"|"version"|"help"|"roda")
+      ACTION="$arg"
     ;;
   esac
-
-  shift
 done
 
 case "$ACTION" in
@@ -181,26 +177,10 @@ case "$ACTION" in
     done;
   ;;
 
-  "start")
+  "roda")
     for configFile in $SERVERS; do
       loadServerConfig $configFile
-      runScript "start-script.sh"
-      echo
-    done;
-  ;;
-
-  "stop")
-    for configFile in $SERVERS; do
-      loadServerConfig $configFile
-      runScript "stop-script.sh"
-      echo
-    done;
-  ;;
-
-  "restart")
-    for configFile in $SERVERS; do
-      loadServerConfig $configFile
-      runScript "stop-script.sh" "start-script.sh"
+      runScript "$2-script.sh"
       echo
     done;
   ;;
@@ -221,6 +201,7 @@ case "$ACTION" in
     echo "Commands:"
     echo "  vai deploy [options...]  Make deploy, keep old files"
     echo "  vai configure            Configure remote host, app path and SSH keygen to remote server"
+    echo "  vai roda [name]          Run script from /deploy/[name]-script.sh"
     echo "  vai keygen               Just configure SSH keygen to remote server"
     echo "  vai version              Show remote commit version"
     echo "  vai help                 This help"
