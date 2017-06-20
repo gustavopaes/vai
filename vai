@@ -131,7 +131,7 @@ deploy() {
 
 runScript() {  
     for script in "$@"; do
-      if [ ! -z "$script" ]
+      if [ -f "deploy/$script" ]
       then
         script="deploy/$script"
         scp -q -P "$DEPLOY_PORT" "$script" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy"
