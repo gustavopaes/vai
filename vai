@@ -129,6 +129,22 @@ deploy() {
   echo "* done!"
 }
 
+runScript() {  
+    for script in "$@"; do
+      if [ ! -z "$script" ]
+      then
+        script="deploy/$script"
+        scp -q -P "$DEPLOY_PORT" "$script" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy"
+        ssh -t -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "((1)) && \
+          cd $DEPLOY_PATH && \
+          echo '* Running $script' && chmod +x $script && ./$script && echo '* $script done'"
+        echo
+      else
+        echo "* no $script file found"
+      fi
+    done;  
+}
+
 while [[ $# -gt 0 ]]
 do
   case "$1" in
@@ -136,7 +152,7 @@ do
       CLEAN_INSTALL=1
     ;;
 
-    "configure"|"keygen"|"deploy"|"version"|"help")
+    "configure"|"keygen"|"deploy"|"version"|"help"|"start"|"stop"|"restart")
       ACTION="$1"
     ;;
   esac
@@ -161,6 +177,30 @@ case "$ACTION" in
     for configFile in $SERVERS; do
       loadServerConfig $configFile
       deploy
+      echo
+    done;
+  ;;
+
+  "start")
+    for configFile in $SERVERS; do
+      loadServerConfig $configFile
+      runScript "start-script.sh"
+      echo
+    done;
+  ;;
+
+  "stop")
+    for configFile in $SERVERS; do
+      loadServerConfig $configFile
+      runScript "stop-script.sh"
+      echo
+    done;
+  ;;
+
+  "restart")
+    for configFile in $SERVERS; do
+      loadServerConfig $configFile
+      runScript "stop-script.sh" "start-script.sh"
       echo
     done;
   ;;
