@@ -135,6 +135,7 @@ runScript() {
   if [ -f "$script" ]
   then
     scp -q -P "$DEPLOY_PORT" "$script" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy"
+    # shellcheck disable=SC2029
     ssh -t -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "cd $DEPLOY_PATH &&\
       echo '* Running $script' && chmod +x $script && ./$script && echo '* $script done'"
     echo
@@ -143,7 +144,7 @@ runScript() {
   fi
 }
 
-for arg in $@;
+for arg in "$@";
 do   
   case "$arg" in
     "--clean-install"|"-c")
