@@ -1,23 +1,47 @@
 #!/bin/bash
 
-VERSION="1.3.0"
+VERSION="1.3.1"
 
+RED="\033[0;31m"
+NC="\033[0m"
+
+## Indica se deve remover todo o conteúdo do projeto no servidor
+## antes de fazer a nova instalação
 CLEAN_INSTALL=0
+
+## Ação principal que será executada
 ACTION="help"
-if [ -e "deploy/" ]
+
+## Lista dos arquivos de configuração dos servidores
+## que será utilizada para o deploy
+SERVERS=
+
+if [ -d "deploy/" ]
 then
-  if [ -z "${!#}" ]
-  then
-    SERVERS=$(find "deploy/" -name "*.config" -type f)
-  else
-    SERVERS=$(find "deploy/" -name "${!#}.config" -type f)
-  fi
+  SERVERS=$(find "deploy/" -name "*.config" -type f)
 fi
-if [ -z "$SERVERS" ]
-then
-  echo "* no config files found"
-  SERVERS=""
-fi
+
+## Script que será executado na task RUN
+RUN_SCRIPT=
+
+echo "vai (version $VERSION)"
+echo
+
+helpMenu() {
+  echo "Usage: vai [command] [options...]"
+  echo
+  echo "Commands:"
+  echo "  vai deploy [options...]     Make deploy, keep old files"
+  echo "  vai configure               Configure remote host, app path and SSH keygen to remote server"
+  echo "  vai run [name] [options...] Run script from /deploy/[name]-script.sh"
+  echo "  vai keygen                  Just configure SSH keygen to remote server"
+  echo "  vai version                 Show remote commit version"
+  echo "  vai help                    This help"
+  echo
+  echo "Options:"
+  echo "  --clean-install, -c         Remove previous files to make clean install"
+  echo "  --server, -s                Server files to use. Could be 'file' or '*file'"
+}
 
 loadServerConfig() {
   # shellcheck source=deploy/
@@ -130,7 +154,7 @@ deploy() {
 }
 
 runScript() {  
-  script="deploy/$1"
+  script="$1"
 
   if [ -f "$script" ]
   then
@@ -144,18 +168,73 @@ runScript() {
   fi
 }
 
-for arg in "$@";
-do   
-  case "$arg" in
-    "--clean-install"|"-c")
-      CLEAN_INSTALL=1
-    ;;
+confirmAction() {
+  echo -n "Confirm? [y/N] "
 
-    "configure"|"keygen"|"deploy"|"version"|"help"|"roda")
-      ACTION="$arg"
-    ;;
+  read -r action
+
+  if [ "$action" != "y" ]
+  then
+    echo -e "${RED}\nAborted${NC}"
+    exit 1
+  fi
+}
+
+## faz a leitura dos parâmetros
+while [ "$1" != "" ];
+do
+  case "$1" in
+    ## ACTION
+    "configure" | "keygen" | "deploy" | "version" | "run" )
+      ACTION="$1"
+
+      echo "* Action defined: $ACTION"
+
+      ## Obtém o script que deve ser executado
+      if [ "$ACTION" == "run" ]
+      then
+        shift
+        
+        if [ "$1" != "" ]
+        then
+          RUN_SCRIPT="deploy/$1-script.sh"
+          echo "* Script defined: $RUN_SCRIPT"
+        fi
+      fi
+      ;;
+
+    ## CLEAN_INSTALL
+    -c | --clean-install )
+      CLEAN_INSTALL=1
+      echo "* Clean install activated"
+      ;;
+
+    ## SERVER
+    -s | --server )
+      shift
+      if [ "$1" != "" ]
+      then
+        SERVERS=$(find "deploy/" -name "$1.config" -type f)
+        echo "* Server config file redefined: $1.config"
+      fi
+      ;;
+
+    ## help
+    "help" )
+      helpMenu
+      exit 0
+      ;;
   esac
+
+  shift
 done
+
+if [ ! "$SERVERS" ]
+then
+  echo "* No server config file found"
+  echo -e "${RED}\nAborted${NC}"
+  exit 1
+fi
 
 case "$ACTION" in
   "configure")
@@ -163,51 +242,49 @@ case "$ACTION" in
   ;;
 
   "keygen")
+    echo "* Server config files: $SERVERS"
+    echo
+
     for configFile in $SERVERS; do
-      loadServerConfig $configFile
+      loadServerConfig "$configFile"
       sshKeyGen
       echo
     done;
   ;;
 
   "deploy")
+    echo "* Server config files: $SERVERS"
+    echo
+
+    confirmAction
     for configFile in $SERVERS; do
-      loadServerConfig $configFile
+      loadServerConfig "$configFile"
       deploy
       echo
     done;
   ;;
 
-  "roda")
+  "run")
+    echo "* Server config files: $SERVERS"
+    echo
+    
+    confirmAction
     for configFile in $SERVERS; do
-      loadServerConfig $configFile
-      runScript "$2-script.sh"
+      loadServerConfig "$configFile"
+      runScript "$RUN_SCRIPT"
       echo
     done;
   ;;
 
   "version")
+    echo "* Server config files: $SERVERS"
+    echo
+    
     for configFile in $SERVERS; do
-      loadServerConfig $configFile
+      loadServerConfig "$configFile"
       version
       echo
     done;
   ;;
 
-  "help"|*)
-    echo "vai (version $VERSION)"
-    echo
-    echo "Usage: vai [command] [options...]"
-    echo
-    echo "Commands:"
-    echo "  vai deploy [options...]  Make deploy, keep old files"
-    echo "  vai configure            Configure remote host, app path and SSH keygen to remote server"
-    echo "  vai roda [name]          Run script from /deploy/[name]-script.sh"
-    echo "  vai keygen               Just configure SSH keygen to remote server"
-    echo "  vai version              Show remote commit version"
-    echo "  vai help                 This help"
-    echo
-    echo "Options:"
-    echo "  --clean-install, -c      Remove previous files to make clean install"
-  ;;
 esac
