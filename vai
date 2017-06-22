@@ -237,7 +237,7 @@ do
       ;;
 
     ## help
-    "help" )
+    -h | help )
       helpMenu
       exit 0
       ;;
