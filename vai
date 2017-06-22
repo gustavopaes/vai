@@ -43,6 +43,11 @@ helpMenu() {
   echo "  --server, -s                Server files to use. Could be 'file' or '*file'"
 }
 
+abort() {
+  echo -e "${RED}\nAborted${NC}"
+  exit 1
+}
+
 loadServerConfig() {
   # shellcheck source=deploy/
   # shellcheck disable=SC1091
@@ -204,10 +209,13 @@ do
       then
         shift
         
-        if [ "$1" != "" ]
+        RUN_SCRIPT="deploy/$1-script.sh"
+        echo "* Script defined: $RUN_SCRIPT"
+
+        if [ ! -f "$RUN_SCRIPT" ]
         then
-          RUN_SCRIPT="deploy/$1-script.sh"
-          echo "* Script defined: $RUN_SCRIPT"
+          echo "    > script not found"
+          abort
         fi
       fi
       ;;
