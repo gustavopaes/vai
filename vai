@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.3.2"
+VERSION="1.3.3"
 
 RED="\033[0;31m"
 NC="\033[0m"
@@ -210,15 +210,15 @@ do
     "configure" | "keygen" | "deploy" | "version" | "run" )
       ACTION="$1"
 
-      echo "* Action defined: $ACTION"
-
       ## Obtém o script que deve ser executado
       if [ "$ACTION" == "run" ]
       then
         shift
         
         RUN_SCRIPT="deploy/$1-script.sh"
-        echo "* Script defined: $RUN_SCRIPT"
+        echo "* Run script:"
+        echo "    > $RUN_SCRIPT"
+        echo
 
         if [ ! -f "$RUN_SCRIPT" ]
         then
@@ -240,7 +240,9 @@ do
       if [ "$1" != "" ]
       then
         SERVERS=$(find "deploy/" -name "$1.config" -type f)
-        echo "* Server config file redefined: $1.config"
+        echo "* Server config file redefined:"
+        echo "    > $1.config"
+        echo
       fi
       ;;
 
