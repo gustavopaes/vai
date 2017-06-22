@@ -185,6 +185,14 @@ confirmAction() {
   fi
 }
 
+validServers() {
+  if [ ! "$SERVERS" ]
+  then
+    echo "* No server config file found"
+    abort
+  fi
+}
+
 showServers() {
   echo "* Server config files:"
   for s in $SERVERS
@@ -246,19 +254,13 @@ do
   shift
 done
 
-if [ ! "$SERVERS" ]
-then
-  echo "* No server config file found"
-  echo -e "${RED}\nAborted${NC}"
-  exit 1
-fi
-
 case "$ACTION" in
   "configure")
     configure
   ;;
 
   "keygen")
+    validServers
     for configFile in $SERVERS; do
       loadServerConfig "$configFile"
       sshKeyGen
@@ -267,6 +269,7 @@ case "$ACTION" in
   ;;
 
   "deploy")
+    validServers
     showServers
     confirmAction
     for configFile in $SERVERS; do
@@ -277,6 +280,7 @@ case "$ACTION" in
   ;;
 
   "run")
+    validServers
     showServers
     confirmAction
     for configFile in $SERVERS; do
@@ -287,6 +291,7 @@ case "$ACTION" in
   ;;
 
   "version")
+    validServers
     for configFile in $SERVERS; do
       loadServerConfig "$configFile"
       version
