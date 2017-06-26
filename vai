@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.3.3"
+VERSION="1.3.4"
 
 RED="\033[0;31m"
 NC="\033[0m"
@@ -33,6 +33,7 @@ helpMenu() {
   echo "Commands:"
   echo "  vai deploy [options...]     Make deploy, keep old files"
   echo "  vai configure               Configure remote host, app path and SSH keygen to remote server"
+  echo "  vai scripts                 Show scripts that can be used by run command"
   echo "  vai run [name] [options...] Run script from /deploy/[name]-script.sh"
   echo "  vai keygen                  Just configure SSH keygen to remote server"
   echo "  vai version                 Show remote commit version"
@@ -207,7 +208,7 @@ while [ "$1" != "" ];
 do
   case "$1" in
     ## ACTION
-    "configure" | "keygen" | "deploy" | "version" | "run" )
+    "configure" | "keygen" | "deploy" | "version" | "run" | "scripts" )
       ACTION="$1"
 
       ## Obtém o script que deve ser executado
@@ -279,6 +280,21 @@ case "$ACTION" in
       deploy
       echo
     done;
+  ;;
+
+  "scripts")
+    echo "* Scripts available:"
+    scripts=$(find "deploy/" -name "*-script.sh" -type f -not -name "post-script.sh")
+    if [ -f "$scripts" ]
+    then
+      for s in $scripts
+      do
+        echo "    > $s"
+      done
+      echo
+    else
+      echo "    > no scripts available"
+    fi
   ;;
 
   "run")
