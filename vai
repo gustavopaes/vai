@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.3.4"
+VERSION="1.3.5"
 
 RED="\033[0;31m"
 NC="\033[0m"
@@ -203,6 +203,10 @@ showServers() {
   echo
 }
 
+cleanScriptName() {
+  echo "$1" | sed -e s~deploy/~~ | sed -e s~-script.sh~~
+}
+
 ## faz a leitura dos parâmetros
 while [ "$1" != "" ];
 do
@@ -283,13 +287,14 @@ case "$ACTION" in
   ;;
 
   "scripts")
+    validServers
     echo "* Scripts available:"
     scripts=$(find "deploy/" -name "*-script.sh" -type f -not -name "post-script.sh")
     if [ -f "$scripts" ]
     then
       for s in $scripts
       do
-        echo "    > $s"
+        cleanScriptName "    > $s"
       done
       echo
     else
